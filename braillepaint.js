@@ -9,6 +9,8 @@ let cButton;
 let textP;
 let tool = 'brush';
 
+let onOverlay = false;
+
 let ax, ay;
 
 
@@ -37,15 +39,27 @@ function setup() {
 	let tButton = createElement('a', 'invert');
 	let cButton = createElement('a', 'clear');
 
+	let closeBrailleTxtbox = createElement('a', `<i class="material-icons">close</i>`);
+	closeBrailleTxtbox.mouseClicked(hideOverlays);
+	closeBrailleTxtbox.parent('#msgbox-overlay');
+	let icon = closeBrailleTxtbox.child()[0];
+	icon.style.fontSize = '10em';
+	icon.style.color = '#fff';
+
+
 	textP = createElement('p', 'hello!');
+	textP.parent('#braille-msgbox');
 	textP.style('font-family', 'Iosevka Web');
 	textP.style('line-height', '100%');
+
 	genButton.mouseClicked(genBraille);
 	tButton.mouseClicked(toggleV);
 	cButton.mouseClicked(resetG);
 	genButton.class('waves-effect waves-light btn');
 	tButton.class('waves-effect waves-light btn');
 	cButton.class('waves-effect waves-light btn');
+
+	hideOverlays();
 }
 
 function toolBtn(icon, tool_, hclass = "material-icons") {
@@ -59,6 +73,11 @@ function resetG() {
 	grid = Array(gh).fill(0).map(i => Array(gw).fill(0));
 }
 
+function hideOverlays() {
+	selectAll('.dark-overlay').forEach(i => i.hide());
+	onOverlay = false;
+}
+
 function mouseOob() {
 	return mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height
 }
@@ -68,6 +87,8 @@ function toggleV() {
 }
 
 function draw() {
+	if (onOverlay)
+		return
 	let v = bSizeSlider.value();
 	bSize = v == 0 ? 0 : 2 * (v - 1) + 1;
 	background(100)
@@ -337,4 +358,6 @@ function genBraille() {
 		finalText += '<br>';
 	}
 	textP.html(finalText);
+	select('#braille-msgbox').parent().style.display = '';
+	onOverlay = true;
 }
