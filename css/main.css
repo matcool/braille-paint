@@ -1,0 +1,34 @@
+body {
+    overscroll-behavior: contain;
+    overflow: hidden;
+    background: #252525;
+}
+
+canvas {
+    padding-left: 0;
+    padding-right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+
+#tools {
+    display: inline-block;
+    position: absolute;
+    left: 0;
+    top: 1em;
+    height: 100vh;
+    background: #474747;
+    color: #bbb;
+    font-size: 1.5em;
+}
+
+#top-menu {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100vw;
+    height: 1.5em;
+    background: #474747;
+    color: #bbb;
+}

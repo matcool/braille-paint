@@ -13,7 +13,9 @@ let ax, ay;
 
 
 function setup() {
-	createCanvas(500, 500);
+	let c = createCanvas(500, 500);
+	c.parent("#braille-canvas");
+	c.canvas.style['margin-top'] = floor(windowHeight/2-height/2)+'px';
 	resetG();
 	sx = width / gw;
 	sy = height / gh;
@@ -49,7 +51,8 @@ function setup() {
 function toolBtn(icon, tool_, hclass = "material-icons") {
 	let btn = createElement('a', `<i class="${hclass}">${icon}</i>`);
 	btn.mouseClicked(_ => tool = tool_);
-	btn.class('waves-effect waves-light btn');
+	btn.parent('#tools');
+	createElement('br').parent('#tools');
 }
 
 function resetG() {
