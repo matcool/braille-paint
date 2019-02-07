@@ -33,6 +33,15 @@ canvas {
     color: #bbb;
 }
 
+#top-menu button {
+    background: none;
+    border: 0;
+    box-shadow: none;
+    border-radius: 0px;
+    color: #fff;
+    font-size: 1em;
+}
+
 .dark-overlay {
     background-color: rgba(0,0,0,0.5);
     position:fixed;

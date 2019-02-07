@@ -31,13 +31,7 @@ function setup() {
 	toolBtn('vignette', 'ellipse');
 	toolBtn('', 'ellipseF', 'fas fa-egg')
 
-	createElement('br');
-	bSizeSlider = createSlider(0, 6, 0);
-	createElement('br');
 
-	let genButton = createElement('a', 'generate');
-	let tButton = createElement('a', 'invert');
-	let cButton = createElement('a', 'clear');
 
 	let closeBrailleTxtbox = createElement('a', `<i class="material-icons">close</i>`);
 	closeBrailleTxtbox.mouseClicked(hideOverlays);
@@ -52,20 +46,31 @@ function setup() {
 	textP.style('font-family', 'Iosevka Web');
 	textP.style('line-height', '100%');
 
-	genButton.mouseClicked(genBraille);
-	tButton.mouseClicked(toggleV);
-	cButton.mouseClicked(resetG);
-	genButton.class('waves-effect waves-light btn');
-	tButton.class('waves-effect waves-light btn');
-	cButton.class('waves-effect waves-light btn');
+	topMenuBtn('Generate',genBraille);
+	topMenuBtn('Invert',_ => inverted = !inverted);
+	topMenuBtn('Clear',resetG);
+
+	bSizeSlider = createSlider(0, 6, 0);
+	bSizeSlider.parent('#top-menu');
+	bSizeSlider.style('position','absolute');
+	bSizeSlider.style('left',floor(windowWidth/2-100)+'px');
 
 	hideOverlays();
+}
+
+function topMenuBtn(name,callback) {
+	let btn = createButton(name);
+	btn.mouseClicked(callback);
+	btn.parent('#top-menu');
 }
 
 function toolBtn(icon, tool_, hclass = "material-icons") {
 	let btn = createElement('a', `<i class="${hclass}">${icon}</i>`);
 	btn.mouseClicked(_ => tool = tool_);
 	btn.parent('#tools');
+	btn.style('cursor','default');
+	btn.mouseOver(_ => btn.style('color','#fff'));
+	btn.mouseOut(_ => btn.style('color','inherit'));
 	createElement('br').parent('#tools');
 }
 
@@ -80,10 +85,6 @@ function hideOverlays() {
 
 function mouseOob() {
 	return mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height
-}
-
-function toggleV() {
-	inverted = !inverted;
 }
 
 function draw() {
