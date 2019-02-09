@@ -20,13 +20,13 @@ function setup() {
 	grid = new gridCanvas(60, 64);
 	sx = width / grid.width;
 	sy = height / grid.height;
-	dotGraphics = createGraphics(width,height);
+	dotGraphics = createGraphics(width, height);
 	dotGraphics.background(100);
 
 	toolBtn('brush', 'brush');
 	toolBtn('timeline', 'line');
 	toolBtn('panorama_fish_eye', 'circle');
-	toolBtn('', 'bucket', 'fas fa-fill-drip');
+	toolBtn('', 'bucket', 'fas fa-fill-drip','bucket (replaces stroke with fill)');
 	toolBtn('', 'ellipse', 'fas fa-egg')
 
 	let closeBrailleTxtbox = createElement('a', `<i class="material-icons">close</i>`);
@@ -36,7 +36,6 @@ function setup() {
 	icon.style.fontSize = '10em';
 	icon.style.color = '#fff';
 
-
 	textP = createElement('p', 'hello!');
 	textP.parent('#braille-msgbox');
 	textP.style('font-family', 'Iosevka Web');
@@ -44,27 +43,40 @@ function setup() {
 
 	topMenuBtn('Generate', genBraille);
 	topMenuBtn('Invert', _ => inverted = !inverted);
-	topMenuBtn('Clear', _ => {grid.reset();drawDots()});
+	topMenuBtn('Clear', _ => {
+		grid.reset();
+		drawDots()
+	});
+	let brushes = [null,0,1,2];
+	topMenuBtn('Stroke: 1', btn => {
+		let i = brushes.indexOf(grid.strokeC);
+		grid.strokeC = brushes[(i+1)%brushes.length];
+		btn.html(`Stroke: ${grid.strokeC}`);
+	})
+	topMenuBtn('Fill: 1', btn => {
+		let i = brushes.indexOf(grid.fillC);
+		grid.fillC = brushes[(i+1)%brushes.length];
+		btn.html(`Fill: ${grid.fillC}`);
+	})
 
 	bSizeSlider = createSlider(0, 6, 0);
 	bSizeSlider.parent('#top-menu');
 	bSizeSlider.style('position', 'absolute');
 	bSizeSlider.style('left', floor(windowWidth / 2 - 100) + 'px');
 
-
-
 	hideOverlays();
 }
 
 function topMenuBtn(name, callback) {
 	let btn = createButton(name);
-	btn.mouseClicked(callback);
+	btn.mouseClicked(_ => callback(btn));
 	btn.parent('#top-menu');
 }
 
-function toolBtn(icon, tool_, hclass = "material-icons") {
+function toolBtn(icon, tool_, hclass = "material-icons", title) {
+	if (title == undefined) title = tool_;
 	let btn = createElement('a', `<i class="${hclass}">${icon}</i>`);
-	btn.attribute('title',tool_);
+	btn.attribute('title', title);
 	btn.mouseClicked(_ => tool = tool_);
 	btn.parent('#tools');
 	btn.style('cursor', 'default');
@@ -82,6 +94,13 @@ function mouseOob() {
 	return mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height
 }
 
+function tileToBoolean(t, x, y) {
+	if (t == 1) return true;
+	if (t == 2 && ((x + (y % 2)) % 2 == 0)) return true;
+
+	return false;
+}
+
 function drawDots() {
 	dotGraphics.background(100)
 	dotGraphics.noStroke();
@@ -90,7 +109,7 @@ function drawDots() {
 	for (let y = 0; y < grid.height; y++) {
 		for (let x = 0; x < grid.width; x++) {
 			let p = grid.grid[y][x];
-			if (p == 1 || (p == 2 && (x+(y%2)) % 2 == 0)) {
+			if (tileToBoolean(p, x, y)) {
 				dotGraphics.ellipse(x * sx, y * sy, sx, sy);
 			}
 		}
@@ -102,7 +121,7 @@ function draw() {
 		return
 	grid.bSize = bSizeSlider.value();
 	background(100);
-	image(dotGraphics,0,0);
+	image(dotGraphics, 0, 0);
 	let gmx = Math.floor(mouseX / sx);
 	let gmy = Math.floor(mouseY / sy);
 	let pgmx = Math.floor(pmouseX / sx);
@@ -158,7 +177,7 @@ function mouseReleased() {
 	}
 	switch (tool) {
 		case 'bucket':
-			grid.fill(gmx, gmy, 0, 1);
+			grid.fill(gmx, gmy, grid.strokeC, grid.fillC);
 			break;
 	}
 	drawDots();
@@ -185,7 +204,7 @@ function genBraille() {
 	*/
 	for (let y = 0; y < grid.height; y += 4) {
 		for (let x = 0; x < grid.width; x += 2) {
-			let tile = checks.map(i => grid.grid[y + i[1]][x + i[0]] == inverted ? 0 : 1).join('');
+			let tile = checks.map(i => tileToBoolean(grid.grid[y + i[1]][x + i[0]], x + i[0], y + i[1]) == inverted ? 0 : 1).join('');
 			finalText += String.fromCharCode(0x2800 + parseInt(tile, 2));
 		}
 		finalText += '<br>';
