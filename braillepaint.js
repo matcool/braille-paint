@@ -10,6 +10,8 @@ let onOverlay = false;
 
 let ax, ay;
 
+let dotGraphics;
+
 
 function setup() {
 	let c = createCanvas(500, 500);
@@ -18,6 +20,8 @@ function setup() {
 	grid = new gridCanvas(60, 64);
 	sx = width / grid.width;
 	sy = height / grid.height;
+	dotGraphics = createGraphics(width,height);
+	dotGraphics.background(100);
 
 	toolBtn('brush', 'brush');
 	toolBtn('', 'eraser', 'fas fa-eraser');
@@ -43,7 +47,7 @@ function setup() {
 
 	topMenuBtn('Generate', genBraille);
 	topMenuBtn('Invert', _ => inverted = !inverted);
-	topMenuBtn('Clear', _ => grid.reset());
+	topMenuBtn('Clear', _ => {grid.reset();drawDots()});
 
 	bSizeSlider = createSlider(0, 6, 0);
 	bSizeSlider.parent('#top-menu');
@@ -78,23 +82,28 @@ function mouseOob() {
 	return mouseX < 0 || mouseX > width || mouseY < 0 || mouseY > height
 }
 
+function drawDots() {
+	dotGraphics.background(100)
+	dotGraphics.noStroke();
+	dotGraphics.fill(255);
+	dotGraphics.ellipseMode(CORNER);
+	for (let y = 0; y < grid.height; y++) {
+		for (let x = 0; x < grid.width; x++) {
+			let p = grid.grid[y][x];
+			if (p) {
+				dotGraphics.ellipse(x * sx, y * sy, sx, sy);
+			}
+		}
+	}
+}
+
 function draw() {
 	if (onOverlay)
 		return
 	let v = bSizeSlider.value();
 	grid.bSize = v == 0 ? 0 : 2 * (v - 1) + 1;
-	background(100)
-	noStroke();
-	fill(255);
-	ellipseMode(CORNER);
-	for (let y = 0; y < grid.height; y++) {
-		for (let x = 0; x < grid.width; x++) {
-			let p = grid.grid[y][x];
-			if (p) {
-				ellipse(x * sx, y * sy, sx, sy);
-			}
-		}
-	}
+	background(100);
+	image(dotGraphics,0,0);
 	let gmx = Math.floor(mouseX / sx);
 	let gmy = Math.floor(mouseY / sy);
 	let pgmx = Math.floor(pmouseX / sx);
@@ -104,6 +113,7 @@ function draw() {
 			case 'brush':
 			case 'eraser':
 				if (grid.inside(gmx, gmy)) grid.line(pgmx, pgmy, gmx, gmy, tool=='eraser');
+				drawDots();
 				break;
 			case 'line':
 				stroke(255);
@@ -161,6 +171,7 @@ function mouseReleased() {
 				grid.ellipse(ax, ay, Math.abs(gmx - ax), Math.abs(gmy - ay), tool == 'ellipseF');
 				break;
 		}
+		drawDots();
 	}
 	switch (tool) {
 		case 'bucket':
