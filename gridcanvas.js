@@ -4,6 +4,8 @@ class gridCanvas {
         this.height = h;
         this.reset();
         this.bSize = 0;
+        this.fillC = 1;
+        this.strokeC = 1;
     }
 
     reset() {
@@ -18,26 +20,31 @@ class gridCanvas {
         if (this.inside(x, y)) this.grid[y][x] = t;
     }
 
-    rect(x, y, w, h, t = 1) {
+    rect(x, y, w, h) {
+        if (h == undefined) h = w;
         for (let j = 0; j <= h; j++) {
             for (let i = 0; i <= w; i++) {
+                let t = this.fillC != null ? this.fillC : (this.strokeC != null && ((j == 0 || j == h) || (i == 0 || i == w)) ? this.strokeC : null);
+                if (t == null) continue;
                 this.point(x + i, y + j, t);
             }
         }
     }
 
-    paint(x, y, erase = false) {
-        let t = erase ? 0 : 1
+    paint(x, y) {
         if (this.bSize == 0) {
-            this.point(x, y, t);
+            this.point(x, y, this.strokeC);
         } else {
-            this.rect(x - this.bSize, y - this.bSize, this.bSize+1, this.bSize+1, t);
+            let c = this.fillC;
+            this.fillC = this.strokeC;
+            this.rect(x - this.bSize, y - this.bSize, this.bSize*2);
+            this.fillC = c;
         }
     }
 
     // literally just copy pasted this https://stackoverflow.com/a/4672319
     // because i couldn't understand the one on wikipedia :grin:
-    line(x0, y0, x1, y1, erase = false) {
+    line(x0, y0, x1, y1) {
         var dx = Math.abs(x1 - x0);
         var dy = Math.abs(y1 - y0);
         var sx = (x0 < x1) ? 1 : -1;
@@ -45,7 +52,7 @@ class gridCanvas {
         var err = dx - dy;
 
         while (true) {
-            this.paint(x0, y0, erase);
+            this.paint(x0, y0);
 
             if ((x0 == x1) && (y0 == y1)) break;
             var e2 = 2 * err;
@@ -61,101 +68,102 @@ class gridCanvas {
     }
 
     // both from https://web.archive.org/web/20120422045142/https://banu.com/blog/7/drawing-circles/
-    circle(cx, cy, r, fill = false) {
-        if (fill) {
+    circle(cx, cy, r) {
+        if (this.fillC != null) {
             for (let y = -r; y <= r; y++) {
                 for (let x = -r; x <= r; x++) {
                     if (x ** 2 + y ** 2 <= r ** 2) {
-                        this.point(x + cx, y + cy)
+                        this.point(x + cx, y + cy, this.fillC)
                     }
                 }
             }
-            return;
         }
 
-        let l = Math.floor(r * Math.cos(QUARTER_PI));
+        if (this.strokeC != null) {
+            let l = Math.floor(r * Math.cos(QUARTER_PI));
 
-        for (let x = 0; x <= l; x++) {
-            let y = Math.floor(Math.sqrt(r ** 2 - x ** 2));
+            for (let x = 0; x <= l; x++) {
+                let y = Math.floor(Math.sqrt(r ** 2 - x ** 2));
 
-            this.point(x + cx, y + cy);
-            this.point(x + cx, -y + cy);
-            this.point(-x + cx, y + cy);
-            this.point(-x + cx, -y + cy);
+                this.point(x + cx, y + cy, this.strokeC);
+                this.point(x + cx, -y + cy, this.strokeC);
+                this.point(-x + cx, y + cy, this.strokeC);
+                this.point(-x + cx, -y + cy, this.strokeC);
 
-            this.point(y + cx, x + cy);
-            this.point(y + cx, -x + cy);
-            this.point(-y + cx, x + cy);
-            this.point(-y + cx, -x + cy);
+                this.point(y + cx, x + cy, this.strokeC);
+                this.point(y + cx, -x + cy, this.strokeC);
+                this.point(-y + cx, x + cy, this.strokeC);
+                this.point(-y + cx, -x + cy, this.strokeC);
+            }
         }
     }
 
     // https://dai.fmph.uniba.sk/upload/0/01/Ellipse.pdf
-    ellipse(cx, cy, rx, ry, fill = false) {
-        if (fill) {
+    ellipse(cx, cy, rx, ry) {
+        if (this.fillC != null) {
             for (let y = -ry; y <= ry; y++) {
                 for (let x = -rx; x <= rx; x++) {
                     if (x ** 2 * ry ** 2 + y ** 2 * rx ** 2 <= rx ** 2 * ry ** 2) {
-                        this.point(x + cx, y + cy)
+                        this.point(x + cx, y + cy, this.fillC)
                     }
                 }
             }
-            return;
         }
-
-        let plotpoints = (x, y) => {
-            this.point(cx + x, cy + y);
-            this.point(cx - x, cy + y);
-            this.point(cx - x, cy - y);
-            this.point(cx + x, cy - y);
-        }
-        let tas = 2 * rx * rx;
-        let tbs = 2 * ry * ry;
-        let x = rx;
-        let y = 0;
-        let dx = ry ** 2 * (1 - 2 * rx);
-        let dy = rx ** 2;
-        let err = 0;
-        let sx = tbs * rx;
-        let sy = 0;
-        while (sx >= sy) {
-            plotpoints(x, y);
-            y++;
-            sy += tas;
-            err += dy;
-            dy += tas;
-            if (err * 2 + dx > 0) {
-                x--;
-                sx -= tbs;
-                err += dx;
-                dx += tbs;
+        if (this.strokeC != null) {
+            let plotpoints = (x, y) => {
+                this.point(cx + x, cy + y,this.strokeC);
+                this.point(cx - x, cy + y,this.strokeC);
+                this.point(cx - x, cy - y,this.strokeC);
+                this.point(cx + x, cy - y,this.strokeC);
             }
-        }
-        x = 0;
-        y = ry;
-        dx = ry ** 2;
-        dy = rx ** 2 * (1 - 2 * ry);
-        err = 0;
-        sx = 0;
-        sy = tas * ry;
-        while (sx <= sy) {
-            plotpoints(x, y);
-            x++;
-            sx += tbs;
-            err += dx;
-            dx += tbs;
-            if (err * 2 + dy > 0) {
-                y--;
-                sy -= tas;
+            let tas = 2 * rx * rx;
+            let tbs = 2 * ry * ry;
+            let x = rx;
+            let y = 0;
+            let dx = ry ** 2 * (1 - 2 * rx);
+            let dy = rx ** 2;
+            let err = 0;
+            let sx = tbs * rx;
+            let sy = 0;
+            while (sx >= sy) {
+                plotpoints(x, y);
+                y++;
+                sy += tas;
                 err += dy;
                 dy += tas;
+                if (err * 2 + dx > 0) {
+                    x--;
+                    sx -= tbs;
+                    err += dx;
+                    dx += tbs;
+                }
+            }
+            x = 0;
+            y = ry;
+            dx = ry ** 2;
+            dy = rx ** 2 * (1 - 2 * ry);
+            err = 0;
+            sx = 0;
+            sy = tas * ry;
+            while (sx <= sy) {
+                plotpoints(x, y);
+                x++;
+                sx += tbs;
+                err += dx;
+                dx += tbs;
+                if (err * 2 + dy > 0) {
+                    y--;
+                    sy -= tas;
+                    err += dy;
+                    dy += tas;
+                }
             }
         }
     }
 
     //https://en.wikipedia.org/wiki/Flood_fill
     fill(x, y, r, w) {
-        if (!this.inside(x,y)) return
+        if (!this.inside(x, y)) return
         let n = this.grid[y][x];
         if (n != r) return
         if (n == w) return

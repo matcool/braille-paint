@@ -24,13 +24,10 @@ function setup() {
 	dotGraphics.background(100);
 
 	toolBtn('brush', 'brush');
-	toolBtn('', 'eraser', 'fas fa-eraser');
 	toolBtn('timeline', 'line');
 	toolBtn('panorama_fish_eye', 'circle');
-	toolBtn('fiber_manual_record', 'circleF');
 	toolBtn('', 'bucket', 'fas fa-fill-drip');
-	toolBtn('vignette', 'ellipse');
-	toolBtn('', 'ellipseF', 'fas fa-egg')
+	toolBtn('', 'ellipse', 'fas fa-egg')
 
 	let closeBrailleTxtbox = createElement('a', `<i class="material-icons">close</i>`);
 	closeBrailleTxtbox.mouseClicked(hideOverlays);
@@ -54,6 +51,8 @@ function setup() {
 	bSizeSlider.style('position', 'absolute');
 	bSizeSlider.style('left', floor(windowWidth / 2 - 100) + 'px');
 
+
+
 	hideOverlays();
 }
 
@@ -65,6 +64,7 @@ function topMenuBtn(name, callback) {
 
 function toolBtn(icon, tool_, hclass = "material-icons") {
 	let btn = createElement('a', `<i class="${hclass}">${icon}</i>`);
+	btn.attribute('title',tool_);
 	btn.mouseClicked(_ => tool = tool_);
 	btn.parent('#tools');
 	btn.style('cursor', 'default');
@@ -90,7 +90,7 @@ function drawDots() {
 	for (let y = 0; y < grid.height; y++) {
 		for (let x = 0; x < grid.width; x++) {
 			let p = grid.grid[y][x];
-			if (p) {
+			if (p == 1 || (p == 2 && (x+(y%2)) % 2 == 0)) {
 				dotGraphics.ellipse(x * sx, y * sy, sx, sy);
 			}
 		}
@@ -100,8 +100,7 @@ function drawDots() {
 function draw() {
 	if (onOverlay)
 		return
-	let v = bSizeSlider.value();
-	grid.bSize = v == 0 ? 0 : 2 * (v - 1) + 1;
+	grid.bSize = bSizeSlider.value();
 	background(100);
 	image(dotGraphics,0,0);
 	let gmx = Math.floor(mouseX / sx);
@@ -111,8 +110,7 @@ function draw() {
 	if (mouseIsPressed) {
 		switch (tool) {
 			case 'brush':
-			case 'eraser':
-				if (grid.inside(gmx, gmy)) grid.line(pgmx, pgmy, gmx, gmy, tool=='eraser');
+				if (grid.inside(gmx, gmy)) grid.line(pgmx, pgmy, gmx, gmy);
 				drawDots();
 				break;
 			case 'line':
@@ -125,30 +123,18 @@ function draw() {
 				line(ax * sx + sx / 2, ay * sy + sy / 2, gmx * sx + sx / 2, gmy * sy + sy / 2);
 				break;
 			case 'circle':
-			case 'circleF':
-				if (ax == undefined) {
-					ax = gmx;
-					ay = gmy;
-				}
-				ellipseMode(CENTER);
-				if (tool == 'circleF') fill(255);
-				else noFill();
-				stroke(255);
-				strokeWeight(1);
-				ellipse(ax * sx, ay * sy, dist(ax * sx, ay * sy, mouseX, mouseY) * 2);
-				break;
 			case 'ellipse':
-			case 'ellipseF':
 				if (grid.inside(gmx, gmy) && ax == undefined) {
 					ax = gmx;
 					ay = gmy;
 				}
 				ellipseMode(CENTER);
-				if (tool == 'ellipseF') fill(255);
+				if (grid.fillC == 1) fill(255);
 				else noFill();
 				stroke(255);
 				strokeWeight(1);
-				ellipse(ax * sx, ay * sy, (mouseX - ax * sx) * 2, (mouseY - ay * sy) * 2);
+				if (tool == 'circle') ellipse(ax * sx, ay * sy, dist(ax * sx, ay * sy, mouseX, mouseY) * 2);
+				else ellipse(ax * sx, ay * sy, (mouseX - ax * sx) * 2, (mouseY - ay * sy) * 2);
 				break;
 		}
 	}
@@ -163,21 +149,19 @@ function mouseReleased() {
 				grid.line(ax, ay, gmx, gmy);
 				break;
 			case 'circle':
-			case 'circleF':
-				grid.circle(ax, ay, Math.floor(dist(ax, ay, gmx, gmy)), tool == 'circleF');
+				grid.circle(ax, ay, Math.floor(dist(ax, ay, gmx, gmy)));
 				break;
 			case 'ellipse':
-			case 'ellipseF':
-				grid.ellipse(ax, ay, Math.abs(gmx - ax), Math.abs(gmy - ay), tool == 'ellipseF');
+				grid.ellipse(ax, ay, Math.abs(gmx - ax), Math.abs(gmy - ay));
 				break;
 		}
-		drawDots();
 	}
 	switch (tool) {
 		case 'bucket':
 			grid.fill(gmx, gmy, 0, 1);
 			break;
 	}
+	drawDots();
 	ax = ay = undefined;
 }
 
