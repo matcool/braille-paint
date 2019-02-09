@@ -1,9 +1,6 @@
 let grid;
-let gw = 60;
-let gh = 64;
 let sx, sy;
 let inverted = false;
-let bSize = 1;
 let bSizeSlider;
 let cButton;
 let textP;
@@ -17,10 +14,10 @@ let ax, ay;
 function setup() {
 	let c = createCanvas(500, 500);
 	c.parent("#braille-canvas");
-	c.canvas.style['margin-top'] = floor(windowHeight/2-height/2)+'px';
-	resetG();
-	sx = width / gw;
-	sy = height / gh;
+	c.canvas.style['margin-top'] = floor(windowHeight / 2 - height / 2) + 'px';
+	grid = new gridCanvas(60, 64);
+	sx = width / grid.width;
+	sy = height / grid.height;
 
 	toolBtn('brush', 'brush');
 	toolBtn('', 'eraser', 'fas fa-eraser');
@@ -30,8 +27,6 @@ function setup() {
 	toolBtn('', 'bucket', 'fas fa-fill-drip');
 	toolBtn('vignette', 'ellipse');
 	toolBtn('', 'ellipseF', 'fas fa-egg')
-
-
 
 	let closeBrailleTxtbox = createElement('a', `<i class="material-icons">close</i>`);
 	closeBrailleTxtbox.mouseClicked(hideOverlays);
@@ -46,19 +41,19 @@ function setup() {
 	textP.style('font-family', 'Iosevka Web');
 	textP.style('line-height', '100%');
 
-	topMenuBtn('Generate',genBraille);
-	topMenuBtn('Invert',_ => inverted = !inverted);
-	topMenuBtn('Clear',resetG);
+	topMenuBtn('Generate', genBraille);
+	topMenuBtn('Invert', _ => inverted = !inverted);
+	topMenuBtn('Clear', _ => grid.reset());
 
 	bSizeSlider = createSlider(0, 6, 0);
 	bSizeSlider.parent('#top-menu');
-	bSizeSlider.style('position','absolute');
-	bSizeSlider.style('left',floor(windowWidth/2-100)+'px');
+	bSizeSlider.style('position', 'absolute');
+	bSizeSlider.style('left', floor(windowWidth / 2 - 100) + 'px');
 
 	hideOverlays();
 }
 
-function topMenuBtn(name,callback) {
+function topMenuBtn(name, callback) {
 	let btn = createButton(name);
 	btn.mouseClicked(callback);
 	btn.parent('#top-menu');
@@ -68,14 +63,10 @@ function toolBtn(icon, tool_, hclass = "material-icons") {
 	let btn = createElement('a', `<i class="${hclass}">${icon}</i>`);
 	btn.mouseClicked(_ => tool = tool_);
 	btn.parent('#tools');
-	btn.style('cursor','default');
-	btn.mouseOver(_ => btn.style('color','#fff'));
-	btn.mouseOut(_ => btn.style('color','inherit'));
+	btn.style('cursor', 'default');
+	btn.mouseOver(_ => btn.style('color', '#fff'));
+	btn.mouseOut(_ => btn.style('color', 'inherit'));
 	createElement('br').parent('#tools');
-}
-
-function resetG() {
-	grid = Array(gh).fill(0).map(i => Array(gw).fill(0));
 }
 
 function hideOverlays() {
@@ -91,14 +82,14 @@ function draw() {
 	if (onOverlay)
 		return
 	let v = bSizeSlider.value();
-	bSize = v == 0 ? 0 : 2 * (v - 1) + 1;
+	grid.bSize = v == 0 ? 0 : 2 * (v - 1) + 1;
 	background(100)
 	noStroke();
 	fill(255);
 	ellipseMode(CORNER);
-	for (let y = 0; y < gh; y++) {
-		for (let x = 0; x < gw; x++) {
-			let p = grid[y][x];
+	for (let y = 0; y < grid.height; y++) {
+		for (let x = 0; x < grid.width; x++) {
+			let p = grid.grid[y][x];
 			if (p) {
 				ellipse(x * sx, y * sy, sx, sy);
 			}
@@ -111,14 +102,12 @@ function draw() {
 	if (mouseIsPressed) {
 		switch (tool) {
 			case 'brush':
-				if (insideGrid(gmx, gmy)) gridLine(pgmx, pgmy, gmx, gmy);
-				break;
 			case 'eraser':
-				if (insideGrid(gmx, gmy)) gridLine(pgmx, pgmy, gmx, gmy, true);
+				if (grid.inside(gmx, gmy)) grid.line(pgmx, pgmy, gmx, gmy, tool=='eraser');
 				break;
 			case 'line':
 				stroke(255);
-				strokeWeight(bSize == 0 ? sx : (bSize * 2 + 1) * sx);
+				strokeWeight(grid.bSize == 0 ? sx : (grid.bSize * 2 + 1) * sx);
 				if (ax == undefined) {
 					ax = gmx;
 					ay = gmy;
@@ -140,7 +129,7 @@ function draw() {
 				break;
 			case 'ellipse':
 			case 'ellipseF':
-				if (insideGrid(gmx, gmy) && ax == undefined) {
+				if (grid.inside(gmx, gmy) && ax == undefined) {
 					ax = gmx;
 					ay = gmy;
 				}
@@ -161,176 +150,24 @@ function mouseReleased() {
 	if (ax != undefined) {
 		switch (tool) {
 			case 'line':
-				gridLine(ax, ay, gmx, gmy);
+				grid.line(ax, ay, gmx, gmy);
 				break;
 			case 'circle':
 			case 'circleF':
-				gridCircle(ax, ay, Math.floor(dist(ax, ay, gmx, gmy)), tool == 'circleF');
+				grid.circle(ax, ay, Math.floor(dist(ax, ay, gmx, gmy)), tool == 'circleF');
 				break;
 			case 'ellipse':
 			case 'ellipseF':
-				gridEllipse(ax, ay, Math.abs(gmx - ax), Math.abs(gmy - ay), tool == 'ellipseF');
+				grid.ellipse(ax, ay, Math.abs(gmx - ax), Math.abs(gmy - ay), tool == 'ellipseF');
 				break;
 		}
 	}
 	switch (tool) {
 		case 'bucket':
-			gridFill(gmx, gmy, 0, 1);
+			grid.fill(gmx, gmy, 0, 1);
 			break;
 	}
 	ax = ay = undefined;
-}
-
-function insideGrid(x, y) {
-	return y >= 0 && y < gh && x >= 0 && x < gw;
-}
-
-function putPix(x, y, t = 1) {
-	if (insideGrid(x, y)) grid[y][x] = t;
-}
-
-function paint(x, y, erase = false) {
-	let t = erase ? 0 : 1
-	if (bSize == 0) {
-		putPix(x, y, t);
-	} else {
-		for (let j = -bSize; j <= bSize; j++) {
-			for (let i = -bSize; i <= bSize; i++) {
-				putPix(x + i, y + j, t);
-			}
-		}
-	}
-}
-
-// literally just copy pasted this https://stackoverflow.com/a/4672319
-// because i couldn't understand the one on wikipedia :grin:
-function gridLine(x0, y0, x1, y1, erase = false) {
-	var dx = Math.abs(x1 - x0);
-	var dy = Math.abs(y1 - y0);
-	var sx = (x0 < x1) ? 1 : -1;
-	var sy = (y0 < y1) ? 1 : -1;
-	var err = dx - dy;
-
-	while (true) {
-		paint(x0, y0, erase);
-
-		if ((x0 == x1) && (y0 == y1)) break;
-		var e2 = 2 * err;
-		if (e2 > -dy) {
-			err -= dy;
-			x0 += sx;
-		}
-		if (e2 < dx) {
-			err += dx;
-			y0 += sy;
-		}
-	}
-}
-
-// both from https://web.archive.org/web/20120422045142/https://banu.com/blog/7/drawing-circles/
-function gridCircle(cx, cy, r, fill = false) {
-	if (fill) {
-		for (let y = -r; y <= r; y++) {
-			for (let x = -r; x <= r; x++) {
-				if (x ** 2 + y ** 2 <= r ** 2) {
-					putPix(x + cx, y + cy)
-				}
-			}
-		}
-		return;
-	}
-
-	let l = Math.floor(r * Math.cos(QUARTER_PI));
-
-	for (let x = 0; x <= l; x++) {
-		let y = Math.floor(Math.sqrt(r ** 2 - x ** 2));
-
-		putPix(x + cx, y + cy);
-		putPix(x + cx, -y + cy);
-		putPix(-x + cx, y + cy);
-		putPix(-x + cx, -y + cy);
-
-		putPix(y + cx, x + cy);
-		putPix(y + cx, -x + cy);
-		putPix(-y + cx, x + cy);
-		putPix(-y + cx, -x + cy);
-	}
-}
-
-// https://dai.fmph.uniba.sk/upload/0/01/Ellipse.pdf
-function gridEllipse(cx, cy, rx, ry, fill = false) {
-	if (fill) {
-		for (let y = -ry; y <= ry; y++) {
-			for (let x = -rx; x <= rx; x++) {
-				if (x ** 2 * ry ** 2 + y ** 2 * rx ** 2 <= rx ** 2 * ry ** 2) {
-					putPix(x + cx, y + cy)
-				}
-			}
-		}
-		return;
-	}
-
-	function plotpoints(x, y) {
-		putPix(cx + x, cy + y);
-		putPix(cx - x, cy + y);
-		putPix(cx - x, cy - y);
-		putPix(cx + x, cy - y);
-	}
-	let tas = 2 * rx * rx;
-	let tbs = 2 * ry * ry;
-	let x = rx;
-	let y = 0;
-	let dx = ry ** 2 * (1 - 2 * rx);
-	let dy = rx ** 2;
-	let err = 0;
-	let sx = tbs * rx;
-	let sy = 0;
-	while (sx >= sy) {
-		plotpoints(x, y);
-		y++;
-		sy += tas;
-		err += dy;
-		dy += tas;
-		if (err * 2 + dx > 0) {
-			x--;
-			sx -= tbs;
-			err += dx;
-			dx += tbs;
-		}
-	}
-	x = 0;
-	y = ry;
-	dx = ry ** 2;
-	dy = rx ** 2 * (1 - 2 * ry);
-	err = 0;
-	sx = 0;
-	sy = tas * ry;
-	while (sx <= sy) {
-		plotpoints(x, y);
-		x++;
-		sx += tbs;
-		err += dx;
-		dx += tbs;
-		if (err * 2 + dy > 0) {
-			y--;
-			sy -= tas;
-			err += dy;
-			dy += tas;
-		}
-	}
-}
-
-//https://en.wikipedia.org/wiki/Flood_fill
-function gridFill(x, y, r, w) {
-	if (x < 0 || x >= gw || y < 0 || y >= gh) return
-	let n = grid[y][x];
-	if (n != r) return
-	if (n == w) return
-	grid[y][x] = w;
-	gridFill(x - 1, y, r, w);
-	gridFill(x + 1, y, r, w);
-	gridFill(x, y - 1, r, w);
-	gridFill(x, y + 1, r, w);
 }
 
 function genBraille() {
@@ -351,9 +188,9 @@ function genBraille() {
 	fg
 	hj
 	*/
-	for (let y = 0; y < gh; y += 4) {
-		for (let x = 0; x < gw; x += 2) {
-			let tile = checks.map(i => grid[y + i[1]][x + i[0]] == inverted ? 0 : 1).join('');
+	for (let y = 0; y < grid.height; y += 4) {
+		for (let x = 0; x < grid.width; x += 2) {
+			let tile = checks.map(i => grid.grid[y + i[1]][x + i[0]] == inverted ? 0 : 1).join('');
 			finalText += String.fromCharCode(0x2800 + parseInt(tile, 2));
 		}
 		finalText += '<br>';
